@@ -19,7 +19,7 @@ jobs:
 
       - name: Start Chrome Remote Desktop Session
         run: |
-          $code = "4/0AVMBsJgwBfVUvjDatGfa7aQv6dizYGaFKsWQw6cneY9pzBcuy9GjcofU2ddPa1faI4ZAwQ" --redirect-url="
+          $code = "4/0AVMBsJgT-IGcHvACf-o6c_Z25SVnaWlZ7VuglOhxICu37moiZ5DCz5560EH_-ZaRO-H3tA"
           $redirect = "https://remotedesktop.google.com/_/oauthredirect"
           $hostName = $env:COMPUTERNAME
           $exePath = "${env:ProgramFiles(x86)}\\Google\\Chrome Remote Desktop\\CurrentVersion\\remoting_start_host.exe"
