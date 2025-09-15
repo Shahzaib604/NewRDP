@@ -1,30 +1,35 @@
-name: Remote Desktop
+name: GetScreen.me
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    name: Start RDP with Software, VPN, Audio, and Loop
+    name: Start Remote Desktop with Software, VPN, Audio, and Loop
     runs-on: windows-latest
 
     steps:
-      - name: Install Chrome Remote Desktop Host
+      - name: Install GetScreen.me
         run: |
-          $msiUrl = "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"
-          $msiPath = "$env:TEMP\\chromeremotedesktophost.msi"
-          Invoke-WebRequest -Uri $msiUrl -OutFile $msiPath
-          Start-Process msiexec.exe -ArgumentList "/i `"$msiPath`" /qn" -Wait
-          Write-Output "✅ Chrome Remote Desktop installed."
+          Write-Output "📥 Downloading GetScreen.me..."
+          $url = "https://getscreen.me/download/getscreen.msi"
+          $msiPath = "$env:TEMP\\getscreen.msi"
+          Invoke-WebRequest -Uri $url -OutFile $msiPath
 
-      - name: Start Chrome Remote Desktop Session
-        run: |
-          $code = "4/0AVMBsJgT-IGcHvACf-o6c_Z25SVnaWlZ7VuglOhxICu37moiZ5DCz5560EH_-ZaRO-H3tA"
-          $redirect = "https://remotedesktop.google.com/_/oauthredirect"
-          $hostName = $env:COMPUTERNAME
-          $exePath = "${env:ProgramFiles(x86)}\\Google\\Chrome Remote Desktop\\CurrentVersion\\remoting_start_host.exe"
-          Start-Process -FilePath "$exePath" -ArgumentList "--code=$code --redirect-url=$redirect --name=$hostName --pin=123456" -Wait
-          Write-Output "✅ Chrome Remote Desktop Host started with PIN 123456."
+          Write-Output "📦 Installing GetScreen.me..."
+          Start-Process msiexec.exe -ArgumentList "/i `"$msiPath`" /qn /norestart" -Wait
+          
+          $exePath = "${env:ProgramFiles}\\GetScreen.me\\getscreen.exe"
+          if (Test-Path $exePath) {
+            Write-Output "🔑 Registering GetScreen.me with email..."
+            Start-Process -FilePath $exePath -ArgumentList "-install -register Syedzohaib7075@gmail.com -hidden -no-gui"
+            Start-Sleep -Seconds 10
+            Start-Service -Name "GetScreen" -ErrorAction SilentlyContinue
+            Set-Service -Name "GetScreen" -StartupType Automatic -ErrorAction SilentlyContinue
+            Write-Output "✅ GetScreen.me installed and registered successfully."
+          } else {
+            Write-Error "❌ Getscreen.exe not found after install!"
+          }
 
       - name: Set Screen Resolution to 1366x768
         shell: cmd
@@ -47,37 +52,34 @@ jobs:
 
       - name: Software Installation (WinRAR + IDM + Tor Browser)
         run: |
-          # Install WinRAR 7.12 silently
+          # Install WinRAR
           $winrarUrl = "https://www.rarlab.com/rar/winrar-x64-712.exe"
           $winrarPath = "$env:TEMP\\winrar-x64-712.exe"
           Invoke-WebRequest -Uri $winrarUrl -OutFile $winrarPath
           Start-Process -FilePath $winrarPath -ArgumentList "/S" -Wait
-          Write-Output "✅ WinRAR 7.12 installed silently."
+          Write-Output "✅ WinRAR installed."
 
-          # Install IDM silently
+          # Install IDM
           $idmUrl = "https://mirror2.internetdownloadmanager.com/idman642build41.exe"
           $idmPath = "$env:TEMP\\idm_setup.exe"
           Invoke-WebRequest -Uri $idmUrl -OutFile $idmPath
           if (Test-Path $idmPath) {
             Start-Process -FilePath $idmPath -ArgumentList "/skipdlgs" -Wait
-            Write-Output "✅ IDM installed silently."
+            Write-Output "✅ IDM installed."
           } else {
             Write-Error "❌ IDM download failed."
           }
 
-          # Download and extract Browser.zip (Tor Browser)
+          # Tor Browser
           $dropboxUrl = "https://www.dropbox.com/scl/fi/faraacel5x4ssj5clo2j1/Browser.zip?rlkey=81rsd6nbwk2p95e0t3mpcirfi&st=3pnv7hia&dl=1"
           $zipPath = "$env:TEMP\\browser.zip"
           $extractPath = "$env:USERPROFILE\\browser"
           Invoke-WebRequest -Uri $dropboxUrl -OutFile $zipPath
           if (Test-Path $zipPath) {
             Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-            Write-Output "✅ Browser.zip extracted to $extractPath"
-          } else {
-            Write-Error "❌ Failed to download Browser.zip"
+            Write-Output "✅ Browser.zip extracted."
           }
 
-          # Create 'Tor' shortcut on Desktop
           $firefox = "$extractPath\\Browser\\firefox.exe"
           $shortcut = "$env:USERPROFILE\\Desktop\\Tor.lnk"
           if (Test-Path $firefox) {
@@ -87,9 +89,7 @@ jobs:
             $s.WorkingDirectory = "$extractPath\\Browser"
             $s.IconLocation = "$firefox,0"
             $s.Save()
-            Write-Output "✅ Tor Browser shortcut created on Desktop"
-          } else {
-            Write-Error "❌ firefox.exe (Tor) not found"
+            Write-Output "✅ Tor Browser shortcut created."
           }
 
       - name: Install VPN Gate (via install_vpngate.bat)
@@ -99,31 +99,17 @@ jobs:
           $extractPath = "$env:USERPROFILE\\Desktop\\vpn_bundle"
           $batPath = "$extractPath\\install_vpngate.bat"
           $vpnCheck = "C:\\Program Files\\SoftEther VPN Client\\vpncmgr.exe"
-          Write-Output "📥 Downloading VPN automation bundle..."
+          Write-Output "📥 Downloading VPN bundle..."
           Invoke-WebRequest -Uri $vpnURL -OutFile $zipPath
-          Write-Output "📦 Extracting VPN bundle..."
           Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
-          if (-Not (Test-Path $batPath)) {
-            Write-Error "❌ install_vpngate.bat not found!"
-            exit 1
-          }
-          Write-Output "🚀 Running install_vpngate.bat..."
+          if (-Not (Test-Path $batPath)) { Write-Error "❌ install_vpngate.bat not found!"; exit 1 }
           Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$batPath`"" -WorkingDirectory $extractPath
-          $maxWait = 300
-          $interval = 5
-          $elapsed = 0
-          Write-Output "⏳ Waiting for vpncmgr.exe to appear..."
+          $maxWait = 300; $interval = 5; $elapsed = 0
           while (-not (Test-Path $vpnCheck) -and ($elapsed -lt $maxWait)) {
-              Start-Sleep -Seconds $interval
-              $elapsed += $interval
-              Write-Output "🔁 Checking... elapsed: $elapsed sec"
+              Start-Sleep -Seconds $interval; $elapsed += $interval
+              Write-Output "🔁 Checking... $elapsed sec"
           }
-          if (Test-Path $vpnCheck) {
-              Write-Output "✅ VPN Gate installed successfully."
-          } else {
-              Write-Error "❌ VPN Gate installation timed out after $maxWait seconds."
-              exit 1
-          }
+          if (Test-Path $vpnCheck) { Write-Output "✅ VPN Gate installed." } else { Write-Error "❌ VPN Gate timed out."; exit 1 }
 
       - name: Install VB-CABLE Virtual Audio Driver
         run: |
@@ -135,16 +121,13 @@ jobs:
           $setup = "$extract\\VBCABLE_Setup_x64.exe"
           if (Test-Path $setup) {
             Start-Process -FilePath $setup -ArgumentList "-i -h"
-            Write-Output "⚠️ VB-CABLE installer launched — manual driver prompt expected."
-          } else {
-            Write-Error "❌ VB-CABLE setup file not found."
+            Write-Output "⚠️ VB-CABLE installer launched."
           }
-          Start-Service "AudioSrv"
-          Start-Service "AudioEndpointBuilder"
+          Start-Service "AudioSrv"; Start-Service "AudioEndpointBuilder"
           Set-Service -Name "AudioSrv" -StartupType Automatic
           Set-Service -Name "AudioEndpointBuilder" -StartupType Automatic
           Write-Output "✅ Audio services running."
-          
+
       - name: Clone Loop Repository and Run loop.bat
         run: |
           git clone https://github.com/Alex15969/Loop
