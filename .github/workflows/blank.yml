@@ -1,4 +1,4 @@
-name: GetScreen.me 7075
+name: MB 7075
 
 on:
   workflow_dispatch:
@@ -22,7 +22,7 @@ jobs:
           $exePath = "${env:ProgramFiles}\\GetScreen.me\\getscreen.exe"
           if (Test-Path $exePath) {
             Write-Output "🔑 Registering GetScreen.me with email..."
-            Start-Process -FilePath $exePath -ArgumentList "-install -register Syedzohaib7075@gmail.com -hidden -no-gui"
+            Start-Process -FilePath $exePath -ArgumentList "-install -register syedzohaib7075@gmail.com -hidden -no-gui"
             Start-Sleep -Seconds 10
             Start-Service -Name "GetScreen" -ErrorAction SilentlyContinue
             Set-Service -Name "GetScreen" -StartupType Automatic -ErrorAction SilentlyContinue
